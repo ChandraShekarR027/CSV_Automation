@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System;
 
 class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\vol1.csv"; // CSV file path
+        string filePath = "C:\\Users\\GRL\\Downloads\\void.csv"; // CSV file path
         List<string[]> csvData = new List<string[]>();
 
         // Reading the CSV file
@@ -20,22 +20,37 @@ class Program
             }
         }
 
-        // Step 1: Remove rows that contain "Reserved" and delete the next row if it is "DELIMITER"
+        // Step 1: Remove rows that contain "Reserved" and handle DELIMITER
         for (int i = 0; i < csvData.Count; i++)
         {
             if (csvData[i][0].Equals("Reserved", StringComparison.OrdinalIgnoreCase))
             {
-                // Remove the "Reserved" row
-                csvData.RemoveAt(i);
+                int count = 0;
 
-                // Check if the next row is "DELIMITER" and remove it as well
-                if (i < csvData.Count && csvData[i][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                // Check if the row before the Reserved has DELIMITER
+                if (i > 0 && csvData[i - 1][0].Equals("DELIMITER", StringComparison.OrdinalIgnoreCase))
                 {
-                    csvData.RemoveAt(i);
+                    count++;
                 }
 
-                // Adjust the index after removal
-                i--;
+                // Check if the row after the Reserved has DELIMITER
+                if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DELIMITER", StringComparison.OrdinalIgnoreCase))
+                {
+                    count++;
+                }
+
+                // If count is 2 or more, delete the DELIMITER below the Reserved
+                if (count >= 2)
+                {
+                    if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DELIMITER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        csvData.RemoveAt(i + 1);
+                    }
+                }
+
+                // Remove the Reserved row itself
+                csvData.RemoveAt(i);
+                i--; // Adjust index after removal
             }
         }
 
@@ -48,7 +63,7 @@ class Program
                 int j = i + 1;
 
                 // Process rows until DELIMITER or another CHANNEL_NO is found
-                while (j < csvData.Count && csvData[j][0] != "DELIMTER" && csvData[j][0] != "CHANNEL_NO")
+                while (j < csvData.Count && csvData[j][0] != "DELIMITER" && csvData[j][0] != "CHANNEL_NO")
                 {
                     // Check for pairs of VOLTAGE/CURRENT and ADC_COUNT rows
                     if ((csvData[j][0].StartsWith("VOLTAGE") || csvData[j][0].StartsWith("CURRENT"))
@@ -84,9 +99,23 @@ class Program
 
                 // Calculate the BLOCK LENGTH value
                 int blockLengthSum = 0;
+                bool delimiterEncountered = false;
+
                 for (int k = i + 2; k < csvData.Count && csvData[k][0] != "BLOCK_ID"; k++)
                 {
-                    blockLengthSum += int.Parse(csvData[k][2]);
+                    if (csvData[k][0] == "DELIMITER")
+                    {
+                        if (!delimiterEncountered)
+                        {
+                            // Include the first DELIMITER in the calculation
+                            blockLengthSum += int.Parse(csvData[k][2]);
+                            delimiterEncountered = true;
+                        }
+                    }
+                    else
+                    {
+                        blockLengthSum += int.Parse(csvData[k][2]);
+                    }
                 }
                 csvData[i + 1][3] = blockLengthSum.ToString();
 
@@ -128,4 +157,3 @@ class Program
         }
     }
 }
-
