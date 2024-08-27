@@ -6,7 +6,8 @@ class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\void.csv"; // CSV file path
+        string filePath = "C:\\Users\\GRL\\Downloads\\DKD2.csv"; // CSV file path
+        string sourceFilePath = "C:\\Users\\GRL\\Downloads\\reve3.csv"; // Source file path
         List<string[]> csvData = new List<string[]>();
 
         // Reading the CSV file
@@ -20,7 +21,10 @@ class Program
             }
         }
 
-        // Step 1: Remove rows that contain "Reserved" and handle DELIMITER
+        // Step 1: Remove all END_FRAME rows in void.csv
+        RemoveEndFrameRows(csvData);
+
+        // Step 2: Remove rows that contain "Reserved" and handle DELIMITER
         for (int i = 0; i < csvData.Count; i++)
         {
             if (csvData[i][0].Equals("Reserved", StringComparison.OrdinalIgnoreCase))
@@ -28,13 +32,13 @@ class Program
                 int count = 0;
 
                 // Check if the row before the Reserved has DELIMITER
-                if (i > 0 && csvData[i - 1][0].Equals("DELIMITER", StringComparison.OrdinalIgnoreCase))
+                if (i > 0 && csvData[i - 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
                 {
                     count++;
                 }
 
                 // Check if the row after the Reserved has DELIMITER
-                if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DELIMITER", StringComparison.OrdinalIgnoreCase))
+                if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
                 {
                     count++;
                 }
@@ -42,7 +46,7 @@ class Program
                 // If count is 2 or more, delete the DELIMITER below the Reserved
                 if (count >= 2)
                 {
-                    if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DELIMITER", StringComparison.OrdinalIgnoreCase))
+                    if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
                     {
                         csvData.RemoveAt(i + 1);
                     }
@@ -54,7 +58,7 @@ class Program
             }
         }
 
-        // Step 2: Update No_Of_Points rows
+        // Step 3: Update No_Of_Points rows
         for (int i = 0; i < csvData.Count; i++)
         {
             if (csvData[i][0] == "CHANNEL_NO")
@@ -63,7 +67,7 @@ class Program
                 int j = i + 1;
 
                 // Process rows until DELIMITER or another CHANNEL_NO is found
-                while (j < csvData.Count && csvData[j][0] != "DELIMITER" && csvData[j][0] != "CHANNEL_NO")
+                while (j < csvData.Count && csvData[j][0] != "DILIMTER" && csvData[j][0] != "CHANNEL_NO")
                 {
                     // Check for pairs of VOLTAGE/CURRENT and ADC_COUNT rows
                     if ((csvData[j][0].StartsWith("VOLTAGE") || csvData[j][0].StartsWith("CURRENT"))
@@ -85,7 +89,7 @@ class Program
             }
         }
 
-        // Step 3: Calculate BLOCK_LENGTH and update offsets
+        // Step 4: Calculate BLOCK_LENGTH and update offsets
         for (int i = 0; i < csvData.Count; i++)
         {
             if (csvData[i][0] == "BLOCK_ID")
@@ -127,7 +131,10 @@ class Program
             }
         }
 
-        // Write the updated data back to the CSV file
+        // Step 5: Copy specific data based on conditions from sourceFilePath to csvData
+        CopyDataBasedOnConditions(sourceFilePath, csvData);
+
+        // Step 6: Write the updated data back to the CSV file
         using (var writer = new StreamWriter(filePath))
         {
             foreach (var row in csvData)
@@ -137,6 +144,65 @@ class Program
         }
 
         Console.WriteLine("CSV file updated successfully.");
+    }
+
+    static void RemoveEndFrameRows(List<string[]> csvData)
+    {
+        for (int i = csvData.Count - 1; i >= 0; i--)
+        {
+            if (csvData[i][0].Trim() == "END_FRAM")
+            {
+                csvData.RemoveAt(i);
+            }
+        }
+    }
+
+    static void CopyDataBasedOnConditions(string inputFilePath, List<string[]> csvData)
+    {
+        List<string[]> copiedData = new List<string[]>();
+
+        using (var reader = new StreamReader(inputFilePath))
+        {
+            bool copy = false;
+            string[] previousLine = null;
+
+            while (!reader.EndOfStream)
+            {
+                var line = reader.ReadLine();
+                var values = line.Split(',');
+
+                if (values[0] == "BLOCK_ID" && values.Length > 3 && values[3] == "15")
+                {
+                    // Start copying from the previous row
+                    if (previousLine != null)
+                    {
+                        copiedData.Add(previousLine);
+                    }
+                    copiedData.Add(values);
+                    copy = true;
+                    continue;
+                }
+
+                if (copy)
+                {
+                    copiedData.Add(values);
+
+                    // Stop copying if END_FRAME is encountered
+                    if (values[0] == "END_FRAM")
+                    {
+                        break;
+                    }
+                }
+
+                previousLine = values;
+            }
+        }
+
+        // Insert the copied data at the end of the csvData list
+        csvData.AddRange(copiedData);
+
+        // Update offsets after adding the data
+        UpdateOffsets(csvData, 0);
     }
 
     static void UpdateOffsets(List<string[]> csvData, int startIndex)
