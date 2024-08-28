@@ -6,7 +6,7 @@ class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\1318.csv";//epath
+        string filePath = "C:\\Users\\GRL\\Downloads\\777.csv";//epath
         string sourceFilePath = "C:\\Users\\GRL\\Downloads\\File4.csv"; // Source file path
         List<string[]> csvData = new List<string[]>();
 
@@ -150,46 +150,49 @@ class Program
         }
 
         // Step 4: Calculate BLOCK_LENGTH and update offsets
-        for (int i = 0; i < csvData.Count; i++)
+for (int i = 0; i < csvData.Count; i++)
+{
+    if (csvData[i][0] == "BLOCK_ID")
+    {
+        // Calculate OFFSET for BLOCK_LENGTH row
+        int offset = int.Parse(csvData[i][1]) + int.Parse(csvData[i][2]);
+
+        // Insert the BLOCK_LENGTH row after the BLOCK_ID row
+        string[] blockLengthRow = new string[] { "BLOCK_LENGTH", offset.ToString(), "2", "0" }; // Placeholder "0" for the 4th column
+        csvData.Insert(i + 1, blockLengthRow);
+
+        // Calculate the BLOCK LENGTH value
+        int blockLengthSum = 0;
+        
+
+        for (int k = i + 2; k < csvData.Count && csvData[k][0] != "BLOCK_ID" && csvData[k][0].Trim() != "END_FRAM"; k++)
         {
-            if (csvData[i][0] == "BLOCK_ID")
+            // Include the length of rows that are considered part of the block, including No_Of_Points
+            if (csvData[k][0] == "DILIMTER")
             {
-                // Calculate OFFSET for BLOCK_LENGTH row
-                int offset = int.Parse(csvData[i][1]) + int.Parse(csvData[i][2]);
-
-                // Insert the BLOCK_LENGTH row after the BLOCK_ID row
-                string[] blockLengthRow = new string[] { "BLOCK_LENGTH", offset.ToString(), "2", "0" }; // Placeholder "0" for the 4th column
-                csvData.Insert(i + 1, blockLengthRow);
-
-                // Calculate the BLOCK LENGTH value
-                int blockLengthSum = 0;
-                bool delimiterEncountered = false;
-
-                for (int k = i + 2; k < csvData.Count && csvData[k][0] != "BLOCK_ID"; k++)
-                {
-                    if (csvData[k][0] == "DILIMTER")
-                    {
-                        if (!delimiterEncountered)
-                        {
-                            // Include the first DELIMITER in the calculation
-                            blockLengthSum += int.Parse(csvData[k][2]);
-                            delimiterEncountered = true;
-                        }
-                    }
-                    else
-                    {
-                        blockLengthSum += int.Parse(csvData[k][2]);
-                    }
-                }
-                csvData[i + 1][3] = blockLengthSum.ToString();
-
-                // Skip the inserted BLOCK_LENGTH row in the loop
-                i++;
-
-                // Update the OFFSET values after adding BLOCK_LENGTH
-                UpdateOffsets(csvData, i);
+              
+                    // Include the all DELIMITER in the calculation
+                    blockLengthSum += int.Parse(csvData[k][2]);
+                   
+                
+            }
+            else
+            {
+                blockLengthSum += int.Parse(csvData[k][2]);
             }
         }
+
+        // Set the calculated sum to the BLOCK_LENGTH row
+        csvData[i + 1][3] = blockLengthSum.ToString();
+
+        // Skip the inserted BLOCK_LENGTH row in the loop
+        i++;
+
+        // Update the OFFSET values after adding BLOCK_LENGTH
+        UpdateOffsets(csvData, i);
+    }
+}
+
 
         // Step 5: Copy specific data based on conditions from sourceFilePath to csvData
         CopyDataBasedOnConditions(sourceFilePath, csvData);
