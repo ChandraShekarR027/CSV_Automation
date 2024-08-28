@@ -6,8 +6,8 @@ class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\DKD2.csv"; // CSV file path
-        string sourceFilePath = "C:\\Users\\GRL\\Downloads\\reve3.csv"; // Source file path
+        string filePath = "C:\\Users\\GRL\\Downloads\\Vole1.csv";//epath
+        string sourceFilePath = "C:\\Users\\GRL\\Downloads\\File4.csv"; // Source file path
         List<string[]> csvData = new List<string[]>();
 
         // Reading the CSV file
@@ -20,6 +20,7 @@ class Program
                 csvData.Add(values);
             }
         }
+        //Step0 Remove block_13(Cable_IR)
 
         // Step 1: Remove all END_FRAME rows in void.csv
         RemoveEndFrameRows(csvData);
@@ -29,32 +30,69 @@ class Program
         {
             if (csvData[i][0].Equals("Reserved", StringComparison.OrdinalIgnoreCase))
             {
-                int count = 0;
-
-                // Check if the row before the Reserved has DELIMITER
-                if (i > 0 && csvData[i - 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                // Check if Reserved is between BLOCK_ID (with 3rd column 0) and DELIMITER
+                bool inBlockIdRange = false;
+                for (int j = i - 1; j >= 0; j--)
                 {
-                    count++;
-                }
-
-                // Check if the row after the Reserved has DELIMITER
-                if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
-                {
-                    count++;
-                }
-
-                // If count is 2 or more, delete the DELIMITER below the Reserved
-                if (count >= 2)
-                {
-                    if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                    if (csvData[j][0].Equals("BLOCK_ID", StringComparison.OrdinalIgnoreCase) && csvData[j][3].Trim() == "0")
                     {
-                        csvData.RemoveAt(i + 1);
+                        inBlockIdRange = true;
+                        break;
+                    }
+                    else if (csvData[j][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inBlockIdRange = false;
+                        break;
                     }
                 }
 
-                // Remove the Reserved row itself
-                csvData.RemoveAt(i);
-                i--; // Adjust index after removal
+                if (inBlockIdRange)
+                {
+                    // Check if the next DELIMITER exists
+                    for (int j = i + 1; j < csvData.Count; j++)
+                    {
+                        if (csvData[j][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                        {
+                            inBlockIdRange = true;
+                            break;
+                        }
+                        else if (csvData[j][0].Equals("BLOCK_ID", StringComparison.OrdinalIgnoreCase))
+                        {
+                            inBlockIdRange = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (!inBlockIdRange)
+                {
+                    int count = 0;
+
+                    // Check if the row before the Reserved has DELIMITER
+                    if (i > 0 && csvData[i - 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        count++;
+                    }
+
+                    // Check if the row after the Reserved has DELIMITER
+                    if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        count++;
+                    }
+
+                    // If count is 2 or more, delete the DELIMITER below the Reserved
+                    if (count >= 2)
+                    {
+                        if (i + 1 < csvData.Count && csvData[i + 1][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
+                        {
+                            csvData.RemoveAt(i + 1);
+                        }
+                    }
+
+                    // Remove the Reserved row itself
+                    csvData.RemoveAt(i);
+                    i--; // Adjust index after removal
+                }
             }
         }
 
@@ -67,7 +105,7 @@ class Program
                 int j = i + 1;
 
                 // Process rows until DELIMITER or another CHANNEL_NO is found
-                while (j < csvData.Count && csvData[j][0] != "DILIMTER" && csvData[j][0] != "CHANNEL_NO")
+                while (j < csvData.Count && csvData[j][0] != "DILMITER" && csvData[j][0] != "CHANNEL_NO")
                 {
                     // Check for pairs of VOLTAGE/CURRENT and ADC_COUNT rows
                     if ((csvData[j][0].StartsWith("VOLTAGE") || csvData[j][0].StartsWith("CURRENT"))
@@ -86,6 +124,28 @@ class Program
 
                 // Update the OFFSET values after adding No_Of_Points
                 UpdateOffsets(csvData, i);
+            }
+            // Step 4.1: Calculate sum and insert No_Of_Points row after BLOCK_ID with 4th column value 14
+            if (csvData[i][0] == "BLOCK_ID" && csvData[i].Length > 3 && csvData[i][3] == "14")
+            {
+                int calculatedSum = 0;
+                int offset = int.Parse(csvData[i][1]); // Assuming the offset is in the second column
+                int j = i + 1;
+
+                // Sum values in the fourth column until BLOCK_START is encountered
+                while (j < csvData.Count && csvData[j][0] != "BLOCK_START")
+                {
+                    if (int.TryParse(csvData[j][2], out int value))
+                    {
+                        calculatedSum += value;
+                    }
+                    j++;
+                }
+
+                // Insert the No_Of_Points row after the BLOCK_ID row
+                string[] noOfPointsRow = new string[] { "No_Of_Points", offset.ToString(), "1", calculatedSum.ToString() };
+                csvData.Insert(i + 1, noOfPointsRow);
+                i++; // Skip the inserted No_Of_Points row
             }
         }
 
@@ -107,7 +167,7 @@ class Program
 
                 for (int k = i + 2; k < csvData.Count && csvData[k][0] != "BLOCK_ID"; k++)
                 {
-                    if (csvData[k][0] == "DELIMITER")
+                    if (csvData[k][0] == "DILIMTER")
                     {
                         if (!delimiterEncountered)
                         {
@@ -150,12 +210,32 @@ class Program
     {
         for (int i = csvData.Count - 1; i >= 0; i--)
         {
+            // Check if the current row is "END_FRAM" and remove it
             if (csvData[i][0].Trim() == "END_FRAM")
             {
                 csvData.RemoveAt(i);
             }
+            // Check for BLOCK_ID with the fourth column value of 13
+            else if (csvData[i][0].Equals("BLOCK_ID", StringComparison.OrdinalIgnoreCase) && csvData[i].Length > 3 && csvData[i][3].Trim() == "13")
+            {
+                // Always remove the row immediately before BLOCK_ID
+                if (i - 1 >= 0)
+                {
+                    csvData.RemoveAt(i - 1);
+                    i--; // Adjust index since the row above BLOCK_ID was removed
+                }
+
+                // Continue removing rows after BLOCK_ID until a BLOCK_START is found
+                while (i < csvData.Count && !csvData[i][0].Equals("BLOCK_START", StringComparison.OrdinalIgnoreCase))
+                {
+                    csvData.RemoveAt(i);
+                }
+            }
         }
     }
+
+
+
 
     static void CopyDataBasedOnConditions(string inputFilePath, List<string[]> csvData)
     {
