@@ -6,7 +6,7 @@ class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\Vole1.csv";//epath
+        string filePath = "C:\\Users\\GRL\\Downloads\\1318.csv";//epath
         string sourceFilePath = "C:\\Users\\GRL\\Downloads\\File4.csv"; // Source file path
         List<string[]> csvData = new List<string[]>();
 
@@ -126,7 +126,7 @@ class Program
                 UpdateOffsets(csvData, i);
             }
             // Step 4.1: Calculate sum and insert No_Of_Points row after BLOCK_ID with 4th column value 14
-            if (csvData[i][0] == "BLOCK_ID" && csvData[i].Length > 3 && csvData[i][3] == "14")
+            if (csvData[i][0] == "BLOCK_ID" && csvData[i].Length > 3 && (csvData[i][3] == "14" || csvData[i][3] == "12" || csvData[i][3] == "11"))
             {
                 int calculatedSum = 0;
                 int offset = int.Parse(csvData[i][1]); // Assuming the offset is in the second column
