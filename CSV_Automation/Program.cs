@@ -6,7 +6,7 @@ class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\0413.csv";//epath
+        string filePath = "C:\\Users\\GRL\\Downloads\\0415.csv";//epath
         string sourceFilePath = "C:\\Users\\GRL\\Downloads\\04003.csv"; // Source file path
         List<string[]> csvData = new List<string[]>();
 
@@ -20,7 +20,7 @@ class Program
                 csvData.Add(values);
             }
         }
-        //Step0 Remove block_13(Cable_IR)
+       // Remove block_13(Cable_IR)
 
         // Step 1: Remove all END_FRAME rows in void.csv
         RemoveEndFrameRows(csvData);
@@ -99,7 +99,7 @@ class Program
         // Step 3: Update No_Of_Points rows
         for (int i = 0; i < csvData.Count; i++)
         {
-            if (csvData[i][0] == "CHANNEL_NO")
+            if (csvData[i][0] == "CHANNEL_NO")//FOR ADC BLOCK
             {
                 int pairCount = 0;
                 int j = i + 1;
@@ -125,7 +125,7 @@ class Program
                 // Update the OFFSET values after adding No_Of_Points
                 UpdateOffsets(csvData, i);
             }
-            // Step 4.1: Calculate sum and insert No_Of_Points row after BLOCK_ID with 4th column value 14
+            // Step 4.1: Calculate sum and insert No_Of_Points row after BLOCK_ID with 4th column value 14 FOR NORMAL BLOCK
             if (csvData[i][0] == "BLOCK_ID" && csvData[i].Length > 3 && (csvData[i][3] == "14" || csvData[i][3] == "12" || csvData[i][3] == "11"))
             {
                 int calculatedSum = 0;
@@ -195,7 +195,7 @@ class Program
 
 
         // Step 5: Copy specific data based on conditions from sourceFilePath to csvData
-        CopyDataBasedOnConditions(sourceFilePath, csvData);
+        CompareAndCopyData(sourceFilePath, csvData);
 
         // Step 6: Write the updated data back to the CSV file
         using (var writer = new StreamWriter(filePath))
@@ -240,53 +240,59 @@ class Program
 
 
 
-    static void CopyDataBasedOnConditions(string inputFilePath, List<string[]> csvData)
+    static void CompareAndCopyData(string sourceFilePath, List<string[]> csvData)
     {
-        List<string[]> copiedData = new List<string[]>();
+        // Calculate the count of data in csvData
+        int countFile1 = csvData.Count;
 
-        using (var reader = new StreamReader(inputFilePath))
+        // Read data from filePath2
+        List<string[]> dataFile2 = ReadCsv(sourceFilePath);
+        int countFile2 = dataFile2.Count;
+
+        // Check if counts are different
+        if (countFile1 != countFile2)
         {
-            bool copy = false;
-            string[] previousLine = null;
+            // Calculate where to start copying from filePath2
+            int startIndex = countFile1;
 
+            List<string[]> copiedData = new List<string[]>();
+
+            // Copy data from filePath2 starting from startIndex
+            for (int i = startIndex; i < dataFile2.Count; i++)
+            {
+                copiedData.Add(dataFile2[i]);
+            }
+
+            // Append the copied data to csvData
+            csvData.AddRange(copiedData);
+
+            // Update offsets after adding the data
+            UpdateOffsets(csvData, 0);
+
+            Console.WriteLine("Missing data from filePath2 has been copied to csvData.");
+        }
+        else
+        {
+            Console.WriteLine("Data counts are the same. No additional data to copy.");
+        }
+    }
+
+    // Helper method to read a CSV file into a list of string arrays
+    static List<string[]> ReadCsv(string sourceFilePath)
+    {
+        var data = new List<string[]>();
+        using (var reader = new StreamReader(sourceFilePath))
+        {
             while (!reader.EndOfStream)
             {
                 var line = reader.ReadLine();
                 var values = line.Split(',');
-
-                if (values[0] == "BLOCK_ID" && values.Length > 3 && values[3] == "15")
-                {
-                    // Start copying from the previous row
-                    if (previousLine != null)
-                    {
-                        copiedData.Add(previousLine);
-                    }
-                    copiedData.Add(values);
-                    copy = true;
-                    continue;
-                }
-
-                if (copy)
-                {
-                    copiedData.Add(values);
-
-                    // Stop copying if END_FRAME is encountered
-                    if (values[0]== "END_FRAM")
-                    {
-                        break;
-                    }
-                }
-
-                previousLine = values;
+                data.Add(values);
             }
         }
-
-        // Insert the copied data at the end of the csvData list
-        csvData.AddRange(copiedData);
-
-        // Update offsets after adding the data
-        UpdateOffsets(csvData, 0);
+        return data;
     }
+
 
     static void UpdateOffsets(List<string[]> csvData, int startIndex)
     {
