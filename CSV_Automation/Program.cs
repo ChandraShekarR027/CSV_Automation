@@ -373,18 +373,32 @@ class Program
 
     static string GetNewFilePath(string originalFilePath)
     {
-        string directory = Path.GetDirectoryName(originalFilePath);
+        // Define the new directory path
+        string baseDirectory = @"C:\GRL\GRL_Mpp_Calibration\Rev3 Automated sheets";
+
+        // Create the new directory if it does not exist
+        if (!Directory.Exists(baseDirectory))
+        {
+            Directory.CreateDirectory(baseDirectory);
+        }
+
+        // Extract the file name and extension from the original file path
         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFilePath);
         string extension = Path.GetExtension(originalFilePath);
 
+        // Generate a timestamp
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+        // Create the new file name with timestamp
         string newFileName = $"{fileNameWithoutExtension}_Rev3_{timestamp}{extension}";
 
-        return Path.Combine(directory, newFileName);
+        // Combine the new directory path with the new file name
+        return Path.Combine(baseDirectory, newFileName);
     }
 
 
 
 
-    }
+
+}
 
