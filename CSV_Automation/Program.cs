@@ -339,8 +339,7 @@ class Program
                 if (int.TryParse(lastRow[1], out firstValue) && int.TryParse(lastRow[2], out secondValue))
                 {
                     sumLastRow = firstValue + secondValue;
-                    Console.WriteLine(sumLastRow);
-                    Console.ReadLine();
+                    
                 }
             }
         }
