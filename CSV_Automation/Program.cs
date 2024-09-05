@@ -6,7 +6,7 @@ class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\0415.csv";//epath
+        string filePath = "C:\\Users\\GRL\\Downloads\\0559.csv";//epath
         string sourceFilePath = "C:\\Users\\GRL\\Downloads\\04003.csv"; // Source file path
         List<string[]> csvData = new List<string[]>();
 
@@ -196,18 +196,22 @@ class Program
 
         // Step 5: Copy specific data based on conditions from sourceFilePath to csvData
         CompareAndCopyData(sourceFilePath, csvData);
+        SaveAsRev3AndUpdateFramRev(ref filePath, csvData);
+        string newFilePath = GetNewFilePath(filePath);//for creating new files
 
         // Step 6: Write the updated data back to the CSV file
-        using (var writer = new StreamWriter(filePath))
+        using (var writer = new StreamWriter(newFilePath))
         {
             foreach (var row in csvData)
             {
                 writer.WriteLine(string.Join(",", row));
             }
         }
-
+        
         Console.WriteLine("CSV file updated successfully.");
     }
+    
+   
 
     static void RemoveEndFrameRows(List<string[]> csvData)
     {
@@ -275,6 +279,7 @@ class Program
         {
             Console.WriteLine("Data counts are the same. No additional data to copy.");
         }
+        
     }
 
     // Helper method to read a CSV file into a list of string arrays
@@ -311,5 +316,75 @@ class Program
             }
         }
     }
-}
+    static void SaveAsRev3AndUpdateFramRev(ref string filePath, List<string[]> csvData)
+    {
+        // Update the FRAM_REV row by setting the 3rd column to "3"
+        for (int i = 0; i < csvData.Count; i++)
+        {
+            if (csvData[i][0].Equals("FRAM_REV", StringComparison.OrdinalIgnoreCase))
+            {
+                csvData[i][3] = "3"; // Set the 3rd column to "3"
+                break;
+            }
+        }
+
+        // Calculate the sum of the 1st and 2nd columns of the last row
+        int sumLastRow = 0;
+        if (csvData.Count > 0)
+        {
+            var lastRow = csvData[csvData.Count - 1];
+            if (lastRow.Length > 2)
+            {
+                int firstValue, secondValue;
+                if (int.TryParse(lastRow[1], out firstValue) && int.TryParse(lastRow[2], out secondValue))
+                {
+                    sumLastRow = firstValue + secondValue;
+                    Console.WriteLine(sumLastRow);
+                    Console.ReadLine();
+                }
+            }
+        }
+
+        // Find and update the LENGTH row's 3rd column
+        for (int i = 0; i < csvData.Count; i++)
+        {
+            if (csvData[i][0].Equals("LENGTH", StringComparison.OrdinalIgnoreCase))
+            {
+                if (csvData[i].Length > 3)
+                {
+                    csvData[i][3] = sumLastRow.ToString(); // Update the 3rd column of LENGTH row
+                }
+                break;
+            }
+        }
+
+        // Save the modified csvData to the new file
+        string newFilePath = GetNewFilePath(filePath);
+        using (StreamWriter writer = new StreamWriter(newFilePath))
+        {
+            foreach (var row in csvData)
+            {
+                writer.WriteLine(string.Join(",", row));
+            }
+        }
+
+        Console.WriteLine($"Original file {filePath} updated with FRAM_REV and LENGTH information, and saved as {newFilePath}.");
+    }
+
+    static string GetNewFilePath(string originalFilePath)
+    {
+        string directory = Path.GetDirectoryName(originalFilePath);
+        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFilePath);
+        string extension = Path.GetExtension(originalFilePath);
+
+        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        string newFileName = $"{fileNameWithoutExtension}_Rev3_{timestamp}{extension}";
+
+        return Path.Combine(directory, newFileName);
+    }
+
+
+
+
+    }
 
