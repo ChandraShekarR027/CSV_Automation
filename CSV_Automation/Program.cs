@@ -290,24 +290,6 @@ class Program
                     }
                 }
 
-                if (inBlockIdRange)
-                {
-                    // Check if the next DELIMITER exists
-                    for (int j = i + 1; j < csvData.Count; j++)
-                    {
-                        if (csvData[j][0].Equals("DILIMTER", StringComparison.OrdinalIgnoreCase))
-                        {
-                            inBlockIdRange = true;
-                            break;
-                        }
-                        else if (csvData[j][0].Equals("BLOCK_ID", StringComparison.OrdinalIgnoreCase))
-                        {
-                            inBlockIdRange = false;
-                            break;
-                        }
-                    }
-                }
-
                 if (!inBlockIdRange)
                 {
                     int count = 0;
