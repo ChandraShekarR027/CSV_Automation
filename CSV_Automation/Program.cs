@@ -6,9 +6,9 @@ class Program
 {
     static void Main()
     {
-        string filePath = "C:\\Users\\GRL\\Downloads\\0559.csv";//epath
-        string sourceFilePath = "C:\\Users\\GRL\\Downloads\\04003.csv"; // Source file path
-        List<string[]> csvData = new List<string[]>();
+        string filePath = "C:\\GRL\\GRL_Mpp_Calibration\\Run\\Rev2\\RUN5.csv";//epath
+        string sourceFilePath = "C:\\GRL\\GRL_Mpp_Calibration\\Run\\Rev3\\REVISION3.csv"; // Source file path
+        List<string[]> csvData = new List<string[]>();//check
 
         // Reading the CSV file
         using (var reader = new StreamReader(filePath))
@@ -20,7 +20,7 @@ class Program
                 csvData.Add(values);
             }
         }
-       // Remove block_13(Cable_IR)
+        // Remove block_13(Cable_IR)
 
         // Step 1: Remove all END_FRAME rows in void.csv
         RemoveEndFrameRows(csvData);
@@ -196,22 +196,14 @@ class Program
 
         // Step 5: Copy specific data based on conditions from sourceFilePath to csvData
         CompareAndCopyData(sourceFilePath, csvData);
-        SaveAsRev3AndUpdateFramRev(ref filePath, csvData);
-        string newFilePath = GetNewFilePath(filePath);//for creating new files
+        SaveAsCsvAndBin(ref filePath, csvData);
 
-        // Step 6: Write the updated data back to the CSV file
-        using (var writer = new StreamWriter(newFilePath))
-        {
-            foreach (var row in csvData)
-            {
-                writer.WriteLine(string.Join(",", row));
-            }
-        }
-        
+       
+
         Console.WriteLine("CSV file updated successfully.");
     }
-    
-   
+
+
 
     static void RemoveEndFrameRows(List<string[]> csvData)
     {
@@ -279,7 +271,7 @@ class Program
         {
             Console.WriteLine("Data counts are the same. No additional data to copy.");
         }
-        
+
     }
 
     // Helper method to read a CSV file into a list of string arrays
@@ -316,18 +308,79 @@ class Program
             }
         }
     }
+    static void SaveAsCsvAndBin(ref string filePath, List<string[]> csvData)
+    {
+        // Update FRAM_REV and LENGTH in the csvData
+        SaveAsRev3AndUpdateFramRev(ref filePath, csvData);
+
+        // Get the new file paths for CSV and BIN files
+        string csvFilePath = GetNewFilePath(filePath, ".csv");
+        string binFilePath = GetNewFilePath(filePath, ".bin");
+
+        // Save data as CSV file
+        using (StreamWriter writer = new StreamWriter(csvFilePath))
+        {
+            foreach (var row in csvData)
+            {
+                writer.WriteLine(string.Join(",", row));
+            }
+        }
+
+        // Save data as BIN file (binary format)
+        using (FileStream fs = new FileStream(binFilePath, FileMode.Create, FileAccess.Write))
+        using (BinaryWriter binWriter = new BinaryWriter(fs))
+        {
+            foreach (var row in csvData)
+            {
+                foreach (var value in row)
+                {
+                    binWriter.Write(value); // Write each value as a binary string
+                }
+            }
+        }
+
+        Console.WriteLine($"CSV file saved as: {csvFilePath}");
+        Console.WriteLine($"BIN file saved as: {binFilePath}");
+    }
+
+
+
+    static string GetNewFilePath(string originalFilePath, string extension)
+    {
+        // Define the new directory path
+        string baseDirectory = @"C:\GRL\GRL_Mpp_Calibration\Run\Rev3 Automated sheets";
+
+        // Create the new directory if it does not exist
+        if (!Directory.Exists(baseDirectory))
+        {
+            Directory.CreateDirectory(baseDirectory);
+        }
+
+        // Extract the file name from the original file path
+        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFilePath);
+
+        // Generate a timestamp
+        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+        // Create the new file name with the provided extension and timestamp
+        string newFileName = $"{fileNameWithoutExtension}_Rev3_{timestamp}{extension}";
+
+        // Combine the new directory path with the new file name
+        return Path.Combine(baseDirectory, newFileName);
+    }
+
+
+  
     static void SaveAsRev3AndUpdateFramRev(ref string filePath, List<string[]> csvData)
     {
-        // Update the FRAM_REV row by setting the 3rd column to "3"
         for (int i = 0; i < csvData.Count; i++)
         {
             if (csvData[i][0].Equals("FRAM_REV", StringComparison.OrdinalIgnoreCase))
             {
-                csvData[i][3] = "3"; // Set the 3rd column to "3"
+                csvData[i][3] = "3";
                 break;
             }
         }
-
         // Calculate the sum of the 1st and 2nd columns of the last row
         int sumLastRow = 0;
         if (csvData.Count > 0)
@@ -339,7 +392,7 @@ class Program
                 if (int.TryParse(lastRow[1], out firstValue) && int.TryParse(lastRow[2], out secondValue))
                 {
                     sumLastRow = firstValue + secondValue;
-                    
+
                 }
             }
         }
@@ -358,8 +411,8 @@ class Program
         }
 
         // Save the modified csvData to the new file
-        string newFilePath = GetNewFilePath(filePath);
-        using (StreamWriter writer = new StreamWriter(newFilePath))
+       
+        using (StreamWriter writer = new StreamWriter(filePath))
         {
             foreach (var row in csvData)
             {
@@ -367,32 +420,6 @@ class Program
             }
         }
 
-        Console.WriteLine($"Original file {filePath} updated with FRAM_REV and LENGTH information, and saved as {newFilePath}.");
-    }
-
-    static string GetNewFilePath(string originalFilePath)
-    {
-        // Define the new directory path
-        string baseDirectory = @"C:\GRL\GRL_Mpp_Calibration\Rev3 Automated sheets";
-
-        // Create the new directory if it does not exist
-        if (!Directory.Exists(baseDirectory))
-        {
-            Directory.CreateDirectory(baseDirectory);
-        }
-
-        // Extract the file name and extension from the original file path
-        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFilePath);
-        string extension = Path.GetExtension(originalFilePath);
-
-        // Generate a timestamp
-        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-
-        // Create the new file name with timestamp
-        string newFileName = $"{fileNameWithoutExtension}_Rev3_{timestamp}{extension}";
-
-        // Combine the new directory path with the new file name
-        return Path.Combine(baseDirectory, newFileName);
     }
 
 
@@ -400,4 +427,5 @@ class Program
 
 
 }
+
 
