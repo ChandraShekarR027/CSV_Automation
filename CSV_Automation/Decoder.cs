@@ -221,8 +221,14 @@ namespace CSV_Automation
                 if (csvData[i][0].Equals("FRAM_REV", StringComparison.OrdinalIgnoreCase))
                 {
                     csvData[i][3] = "3";
+                }
+                if (csvData[i][0].Equals("LICENSE", StringComparison.OrdinalIgnoreCase))
+                {
+                    csvData[i][3] = "65535";
+                    csvData[i+1][3] = "65535";
                     break;
                 }
+
             }
             // Calculate the sum of the 1st and 2nd columns of the last row
             int sumLastRow = 0;
@@ -316,7 +322,7 @@ namespace CSV_Automation
                 if (csvData[i][0] == "BLOCK_ID")
                 {
                     int offset = int.Parse(csvData[i][1]) + int.Parse(csvData[i][2]);
-                    string[] blockLengthRow = new string[] { "BLOCK_LENGTH", offset.ToString(), "2", "0" };
+                    string[] blockLengthRow = new string[] { "BLOCK_LENGTH", offset.ToString(), "2", "0", "IS INCLUDING BLOCK LENGTH AND INCLUDING DELIMETER", "0" };
                     csvData.Insert(i + 1, blockLengthRow);
 
                     int blockLengthSum = 0;
@@ -354,7 +360,7 @@ namespace CSV_Automation
                         j++;
                     }
 
-                    string[] noOfPointsRow = new string[] { "No_Of_Points", "0", "1", pairCount.ToString() };
+                    string[] noOfPointsRow = new string[] { "No_Of_Points", "0", "1", pairCount.ToString(), "Number of point","0" };
                     csvData.Insert(i + 1, noOfPointsRow);
                     i++;
 
@@ -376,7 +382,7 @@ namespace CSV_Automation
                         j++;
                     }
 
-                    string[] noOfPointsRow = new string[] { "No_Of_Points", offset.ToString(), "1", calculatedSum.ToString() };
+                    string[] noOfPointsRow = new string[] { "No_Of_Points", offset.ToString(), "1", calculatedSum.ToString(), "Number of point", "0" };
                     csvData.Insert(i + 1, noOfPointsRow);
                     i++;
                 }
