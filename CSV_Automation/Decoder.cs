@@ -68,7 +68,7 @@ namespace CSV_Automation
                 csvData.AddRange(copiedData);
 
                 // Update offsets after adding the data
-                UpdateOffsets(csvData, 0);
+                UpdateOffsets(csvData);
 
                 Console.WriteLine("Missing data from filePath2 has been copied to csvData.");
                 Thread.Sleep(5000);
@@ -110,9 +110,9 @@ namespace CSV_Automation
 
 
 
-        public void UpdateOffsets(List<string[]> csvData, int startIndex)
+        public void UpdateOffsets(List<string[]> csvData)
         {
-            for (int i = startIndex; i < csvData.Count; i++)
+            for (int i = 2; i < csvData.Count; i++)
             {
                 if (i > 0)
                 {
@@ -133,10 +133,28 @@ namespace CSV_Automation
             // Update FRAM_REV and LENGTH in the csvData
             SaveAsRev3AndUpdateFramRev(ref filePath, csvData);
 
-            // Get the new file paths for CSV and BIN files
-            string csvFilePath = GetNewFilePath(filePath, ".csv");
-            string binFilePath = GetNewFilePath(filePath, ".bin");
+            string systemSerialNum = ExtractSystemSerialNum(csvData);
+            string framRev = ExtractFramRev(csvData);
 
+            if (systemSerialNum == null || framRev == null)
+            {
+                Console.WriteLine("Unable to extract system serial number or FRAM_REV from the CSV data.");
+                return;
+            }
+
+            // Define the output directory
+            string outputDirectory = @"D:\Git-grl01\CSV_Automation\CSV_Automation\bin\Debug\Output";
+
+            // Ensure the output directory exists
+            if (!Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+
+            // Generate filenames based on extracted values
+            string csvFilePath = Path.Combine(outputDirectory, $"{"C3TPR"}_{systemSerialNum+"BB"}_{"Rev3"}.csv");
+            string binFilePath = Path.Combine(outputDirectory, $"{"C3TPR"}_{systemSerialNum+"BB"}_{"Rev3"}.bin");
+            
             // Save data as CSV file
             using (StreamWriter writer = new StreamWriter(csvFilePath))
             {
@@ -160,36 +178,39 @@ namespace CSV_Automation
             }
 
             Console.WriteLine($"CSV file saved as: {csvFilePath}");
-            Thread.Sleep(5000);
             Console.WriteLine($"BIN file saved as: {binFilePath}");
-            Thread.Sleep(5000);
         }
-
-
-
-        public string GetNewFilePath(string originalFilePath, string extension)
+        private string ExtractSystemSerialNum(List<string[]> csvData)
         {
-            // Define the new directory path
-            string baseDirectory = @"D:\Git-grl01\CSV_Automation\CSV_Automation\bin\Debug\Output";
-
-            // Create the new directory if it does not exist
-            if (!Directory.Exists(baseDirectory))
+            // Implement logic to extract the system serial number
+            // For example, searching for a specific row or column where the serial number is located
+            // Placeholder implementation
+            foreach (var row in csvData)
             {
-                Directory.CreateDirectory(baseDirectory);
+                if (row.Length > 0 && row[0].StartsWith("SYSTEM_SERIAL_NUMBER"))
+                {
+                    return row[3]; // Assume the serial number is in the second column
+                }
             }
-
-            // Extract the file name from the original file path
-            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(originalFilePath);
-
-            // Generate a timestamp
-            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-
-            // Create the new file name with the provided extension and timestamp
-            string newFileName = $"{fileNameWithoutExtension}_Rev3_{timestamp}{extension}";
-
-            // Combine the new directory path with the new file name
-            return Path.Combine(baseDirectory, newFileName);
+            return null;
         }
+
+        public  string ExtractFramRev(List<string[]> csvData)
+        {
+            // Implement logic to extract the FRAM_REV value
+            // For example, searching for a specific row or column where FRAM_REV is located
+            // Placeholder implementation
+            foreach (var row in csvData)
+            {
+                if (row.Length > 2 && row[0] == "FRAM_REV")
+                {
+                    return row[3]; // Assume the FRAM_REV value is in the third column
+                }
+            }
+            return null;
+        }
+
+
 
 
 
@@ -307,9 +328,10 @@ namespace CSV_Automation
                     csvData[i + 1][3] = blockLengthSum.ToString();
                     i++;
 
-                    UpdateOffsets(csvData, i);
+                   
                 }
             }
+            UpdateOffsets(csvData);
         }
 
 
@@ -324,7 +346,7 @@ namespace CSV_Automation
 
                     while (j < csvData.Count && csvData[j][0] != "DELIMITER" && csvData[j][0] != "CHANNEL_NO")
                     {
-                        if ((csvData[j][0].StartsWith("VOLTAGE") || csvData[j][0].StartsWith("CURRENT")) && j + 1 < csvData.Count && csvData[j + 1][0] == "ADC_COUNT")
+                        if ((csvData[j][0].StartsWith("VOLTAGE") || csvData[j][0].StartsWith("CURRENT") || csvData[j][0].StartsWith("TEMPERATURE")) && j + 1 < csvData.Count && csvData[j + 1][0] == "ADC_COUNT")
                         {
                             pairCount++;
                             j++;
@@ -336,7 +358,7 @@ namespace CSV_Automation
                     csvData.Insert(i + 1, noOfPointsRow);
                     i++;
 
-                    UpdateOffsets(csvData, i);
+                    UpdateOffsets(csvData);
                 }
 
                 if (csvData[i][0] == "BLOCK_ID" && (csvData[i][3] == "14" || csvData[i][3] == "12" || csvData[i][3] == "11"))
